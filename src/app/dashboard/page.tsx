@@ -2,6 +2,7 @@
 
 import { useUser, UserButton } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { GraduationCap, Briefcase, Shield, Loader2 } from 'lucide-react';
 
@@ -15,6 +16,7 @@ interface UserData {
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,8 +33,14 @@ export default function DashboardPage() {
         role: role || 'student',
       });
       setLoading(false);
+
+      // Redirect admin users to admin dashboard
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+        return;
+      }
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, user, router]);
 
   if (!isLoaded || loading) {
     return (
