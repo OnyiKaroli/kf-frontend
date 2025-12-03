@@ -45,6 +45,12 @@ export default function DashboardPage() {
         router.push('/faculty/dashboard');
         return;
       }
+
+      // Redirect student users to student dashboard
+      if (role === 'student') {
+        router.push('/student/dashboard');
+        return;
+      }
     }
   }, [isLoaded, user, router]);
 
