@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ClerkProvider } from '@clerk/nextjs';
+import { ClerkProvider, ClerkLoaded, ClerkLoading } from '@clerk/nextjs';
+import Loading from "@/components/ui/Loading";
 import "./globals.css";
 import { Analytics } from '@vercel/analytics/react';
 
@@ -39,8 +40,15 @@ export default function RootLayout({
         <body
           className={`${inter.variable} antialiased`}
         >
-          {children}
-          <Analytics />
+          <ClerkLoading>
+            <div className="flex h-screen w-screen items-center justify-center bg-white dark:bg-black">
+              <Loading />
+            </div>
+          </ClerkLoading>
+          <ClerkLoaded>
+            {children}
+            <Analytics />
+          </ClerkLoaded>
         </body>
       </html>
     </ClerkProvider>

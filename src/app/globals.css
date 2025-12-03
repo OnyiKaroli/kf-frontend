@@ -55,3 +55,19 @@ body {
   background: #a1a1a1;
 }
 
+/* Animation Utilities */
+.delay-0 {
+  animation-delay: 0ms;
+}
+
+.delay-150 {
+  animation-delay: 150ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.direction-reverse {
+  animation-direction: reverse;
+}
