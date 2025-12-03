@@ -39,6 +39,12 @@ export default function DashboardPage() {
         router.push('/admin/dashboard');
         return;
       }
+
+      // Redirect faculty users to faculty dashboard
+      if (role === 'faculty') {
+        router.push('/faculty/dashboard');
+        return;
+      }
     }
   }, [isLoaded, user, router]);
 
