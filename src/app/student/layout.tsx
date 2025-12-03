@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser, UserButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,7 +13,6 @@ import {
   CreditCard,
   BarChart3,
   Home,
-  Menu,
 } from 'lucide-react';
 
 const navigation = [
@@ -91,28 +90,25 @@ export default function StudentLayout({
             </nav>
           </div>
           <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <Link
-              href="/dashboard"
-              className="flex-shrink-0 w-full group block"
-            >
-              <div className="flex items-center">
-                <div>
-                  <img
-                    className="inline-block h-10 w-10 rounded-full"
-                    src={user?.imageUrl || '/default-avatar.png'}
-                    alt={user?.fullName || 'User'}
-                  />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700 group-hover:text-indigo-600">
-                    {user?.fullName}
-                  </p>
-                  <p className="text-xs font-medium text-gray-500">
-                    Back to Dashboard
-                  </p>
-                </div>
+            <div className="flex items-center w-full">
+              <UserButton
+                afterSignOutUrl="/sign-in"
+                appearance={{
+                  elements: {
+                    avatarBox: 'w-10 h-10',
+                    userButtonPopoverCard: 'shadow-xl',
+                  }
+                }}
+              />
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-700">
+                  {user?.fullName}
+                </p>
+                <p className="text-xs font-medium text-gray-500">
+                  Student
+                </p>
               </div>
-            </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -126,9 +122,14 @@ export default function StudentLayout({
               Student Portal
             </span>
           </div>
-          <button className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100">
-            <Menu className="h-6 w-6" />
-          </button>
+          <UserButton 
+            afterSignOutUrl="/sign-in"
+            appearance={{
+              elements: {
+                avatarBox: 'w-8 h-8'
+              }
+            }}
+          />
         </div>
       </div>
 
