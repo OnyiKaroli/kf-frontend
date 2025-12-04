@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 import {
   BookOpen,
@@ -13,70 +13,74 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
+import { getFacultyDashboard } from '@/lib/faculty-api';
 
-// Mock data for initial implementation
-const MOCK_STATS = {
-  activeCourses: 3,
-  totalStudents: 145,
-  pendingAssignments: 12,
-  upcomingClasses: 2
-};
+interface DashboardStats {
+  activeCourses: number;
+  totalStudents: number;
+  pendingAssignments: number;
+  upcomingClasses: number;
+}
 
-const MOCK_UPCOMING_CLASSES = [
-  {
-    id: 1,
-    course: 'Introduction to Computer Science',
-    time: '10:00 AM - 11:30 AM',
-    room: 'Room 301',
-    students: 45
-  },
-  {
-    id: 2,
-    course: 'Data Structures & Algorithms',
-    time: '02:00 PM - 03:30 PM',
-    room: 'Lab 2',
-    students: 38
-  }
-];
+interface UpcomingClass {
+  id: string;
+  course: string;
+  courseCode: string;
+  time: string;
+  room: string;
+  students: number;
+}
 
-const MOCK_RECENT_SUBMISSIONS = [
-  {
-    id: 1,
-    student: 'Alice Johnson',
-    assignment: 'Binary Trees Implementation',
-    course: 'Data Structures',
-    submittedAt: '10 mins ago',
-    status: 'pending'
-  },
-  {
-    id: 2,
-    student: 'Bob Smith',
-    assignment: 'Web Development Project',
-    course: 'Web Technologies',
-    submittedAt: '1 hour ago',
-    status: 'graded'
-  },
-  {
-    id: 3,
-    student: 'Charlie Brown',
-    assignment: 'Database Schema Design',
-    course: 'Database Systems',
-    submittedAt: '2 hours ago',
-    status: 'pending'
-  }
-];
+interface RecentSubmission {
+  id: string;
+  student: string;
+  assignment: string;
+  course: string;
+  submittedAt: string;
+  status: string;
+}
 
 export default function FacultyDashboardPage() {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    activeCourses: 0,
+    totalStudents: 0,
+    pendingAssignments: 0,
+    upcomingClasses: 0
+  });
+  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
+  const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
 
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    async function fetchDashboardData() {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await getFacultyDashboard(getToken);
+        
+        if (response.success) {
+          setStats(response.data.stats);
+          setUpcomingClasses(response.data.upcomingClasses);
+          setRecentSubmissions(response.data.recentSubmissions);
+        } else {
+          setError(response.message || 'Failed to load dashboard data');
+        }
+      } catch (err: any) {
+        console.error('Error fetching dashboard:', err);
+        setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (isLoaded && user) {
+      fetchDashboardData();
+    }
+  }, [isLoaded, user, getToken]);
 
   if (!isLoaded || loading) {
     return (
@@ -84,6 +88,24 @@ export default function FacultyDashboardPage() {
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -103,28 +125,28 @@ export default function FacultyDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Active Courses"
-          value={MOCK_STATS.activeCourses}
+          value={stats.activeCourses}
           subtitle="Current semester"
           icon={BookOpen}
           gradient="from-blue-500 to-indigo-600"
         />
         <StatCard
           title="Total Students"
-          value={MOCK_STATS.totalStudents}
+          value={stats.totalStudents}
           subtitle="Across all courses"
           icon={Users}
           gradient="from-purple-500 to-pink-600"
         />
         <StatCard
           title="Pending Grading"
-          value={MOCK_STATS.pendingAssignments}
+          value={stats.pendingAssignments}
           subtitle="Assignments to review"
           icon={FileText}
           gradient="from-orange-500 to-red-600"
         />
         <StatCard
           title="Classes Today"
-          value={MOCK_STATS.upcomingClasses}
+          value={stats.upcomingClasses}
           subtitle="Upcoming sessions"
           icon={Calendar}
           gradient="from-green-500 to-teal-600"
@@ -144,30 +166,37 @@ export default function FacultyDashboardPage() {
             Today's Schedule
           </h2>
           <div className="space-y-4">
-            {MOCK_UPCOMING_CLASSES.map((cls) => (
-              <div key={cls.id} className="flex items-start p-4 bg-gray-50 rounded-xl hover:bg-indigo-50 transition-colors border border-gray-100">
-                <div className="flex-shrink-0 w-16 text-center bg-white rounded-lg p-2 border border-gray-200 shadow-sm">
-                  <span className="block text-xs font-bold text-gray-500 uppercase">Start</span>
-                  <span className="block text-sm font-bold text-indigo-600">{cls.time.split(' - ')[0]}</span>
-                </div>
-                <div className="ml-4 flex-1">
-                  <h3 className="font-bold text-gray-900">{cls.course}</h3>
-                  <div className="flex items-center text-sm text-gray-600 mt-1 space-x-4">
-                    <span className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
-                      {cls.students} Students
-                    </span>
-                    <span className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-                      {cls.room}
-                    </span>
+            {upcomingClasses.length > 0 ? (
+              upcomingClasses.map((cls) => (
+                <div key={cls.id} className="flex items-start p-4 bg-gray-50 rounded-xl hover:bg-indigo-50 transition-colors border border-gray-100">
+                  <div className="flex-shrink-0 w-16 text-center bg-white rounded-lg p-2 border border-gray-200 shadow-sm">
+                    <span className="block text-xs font-bold text-gray-500 uppercase">Start</span>
+                    <span className="block text-sm font-bold text-indigo-600">{cls.time.split(' - ')[0]}</span>
                   </div>
+                  <div className="ml-4 flex-1">
+                    <h3 className="font-bold text-gray-900">{cls.course}</h3>
+                    <div className="flex items-center text-sm text-gray-600 mt-1 space-x-4">
+                      <span className="flex items-center">
+                        <Users className="w-4 h-4 mr-1" />
+                        {cls.students} Students
+                      </span>
+                      <span className="flex items-center">
+                        <div className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+                        {cls.room}
+                      </span>
+                    </div>
+                  </div>
+                  <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    View Class
+                  </button>
                 </div>
-                <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-                  View Class
-                </button>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No classes scheduled for today</p>
               </div>
-            ))}
+            )}
           </div>
         </motion.div>
 
@@ -183,24 +212,33 @@ export default function FacultyDashboardPage() {
             Recent Submissions
           </h2>
           <div className="space-y-4">
-            {MOCK_RECENT_SUBMISSIONS.map((sub) => (
-              <div key={sub.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className={`w-2 h-2 mt-2 rounded-full ${sub.status === 'pending' ? 'bg-orange-500' : 'bg-green-500'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{sub.assignment}</p>
-                  <p className="text-xs text-gray-500">{sub.student} • {sub.course}</p>
-                  <p className="text-xs text-gray-400 mt-1">{sub.submittedAt}</p>
-                </div>
-                {sub.status === 'pending' && (
-                  <button className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
-                    Grade
-                  </button>
-                )}
+            {recentSubmissions.length > 0 ? (
+              <>
+                {recentSubmissions.map((sub) => (
+                  <div key={sub.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className={`w-2 h-2 mt-2 rounded-full ${sub.status === 'pending' ? 'bg-orange-500' : 'bg-green-500'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{sub.assignment}</p>
+                      <p className="text-xs text-gray-500">{sub.student} • {sub.course}</p>
+                      <p className="text-xs text-gray-400 mt-1">{sub.submittedAt}</p>
+                    </div>
+                    {sub.status === 'pending' && (
+                      <button className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                        Grade
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button className="w-full py-2 text-sm text-center text-gray-600 hover:text-indigo-600 font-medium border-t border-gray-100 mt-2">
+                  View All Submissions
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No recent submissions</p>
               </div>
-            ))}
-            <button className="w-full py-2 text-sm text-center text-gray-600 hover:text-indigo-600 font-medium border-t border-gray-100 mt-2">
-              View All Submissions
-            </button>
+            )}
           </div>
         </motion.div>
       </div>
