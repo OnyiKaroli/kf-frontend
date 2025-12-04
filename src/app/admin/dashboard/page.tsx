@@ -159,69 +159,71 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        {/* User Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <Users className="w-6 h-6 mr-2 text-indigo-600" />
-            User Statistics
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <UserStat label="Students" value={stats?.users.students || 0} color="blue" />
-            <UserStat label="Faculty" value={stats?.users.faculty || 0} color="purple" />
-            <UserStat label="Staff" value={stats?.users.staff || 0} color="green" />
-            <UserStat label="Admins" value={stats?.users.admins || 0} color="red" />
-          </div>
-          
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Account Status</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex items-center">
-                <UserCheck className="w-5 h-5 text-green-500 mr-2" />
-                <div>
-                  <p className="text-sm text-gray-600">Active</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.users.active || 0}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* User Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 h-full"
+          >
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+              <Users className="w-6 h-6 mr-2 text-indigo-600" />
+              User Statistics
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <UserStat label="Students" value={stats?.users.students || 0} color="blue" />
+              <UserStat label="Faculty" value={stats?.users.faculty || 0} color="purple" />
+              <UserStat label="Staff" value={stats?.users.staff || 0} color="green" />
+              <UserStat label="Admins" value={stats?.users.admins || 0} color="red" />
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Account Status</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center">
+                  <UserCheck className="w-5 h-5 text-green-500 mr-2" />
+                  <div>
+                    <p className="text-sm text-gray-600">Active</p>
+                    <p className="text-lg font-bold text-gray-900">{stats?.users.active || 0}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <UserX className="w-5 h-5 text-gray-500 mr-2" />
-                <div>
-                  <p className="text-sm text-gray-600">Inactive</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.users.inactive || 0}</p>
+                <div className="flex items-center">
+                  <UserX className="w-5 h-5 text-gray-500 mr-2" />
+                  <div>
+                    <p className="text-sm text-gray-600">Inactive</p>
+                    <p className="text-lg font-bold text-gray-900">{stats?.users.inactive || 0}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                <div>
-                  <p className="text-sm text-gray-600">Suspended</p>
-                  <p className="text-lg font-bold text-gray-900">{stats?.users.suspended || 0}</p>
+                <div className="flex items-center">
+                  <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                  <div>
+                    <p className="text-sm text-gray-600">Suspended</p>
+                    <p className="text-lg font-bold text-gray-900">{stats?.users.suspended || 0}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <Activity className="w-6 h-6 mr-2 text-indigo-600" />
-            Recent Activity
-          </h2>
-          <div className="space-y-4">
-            {activities.map((activity, index) => (
-              <ActivityItem key={index} activity={activity} />
-            ))}
-          </div>
-        </motion.div>
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 h-full"
+          >
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+              <Activity className="w-6 h-6 mr-2 text-indigo-600" />
+              Recent Activity
+            </h2>
+            <div className="space-y-4">
+              {activities.map((activity, index) => (
+                <ActivityItem key={index} activity={activity} />
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
