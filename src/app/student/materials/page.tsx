@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import {
   FileText,
   Download,
@@ -12,93 +13,35 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
+import { getCourseMaterials } from '@/lib/student-api';
 
-// Mock data - replace with API calls
-const mockMaterials = [
-  {
-    id: '1',
-    title: 'Introduction to Programming - Lecture 1',
-    description: 'Basic programming concepts and syntax',
-    material_type: 'lecture_notes',
-    file_url: '/materials/cs101-lecture1.pdf',
-    file_size: 2048576,
-    file_type: 'application/pdf',
-    created_at: '2024-11-01T10:00:00Z',
-    course: { name: 'Introduction to Computer Science', course_code: 'CS101' },
-    uploaded_by_user: { first_name: 'Dr. Sarah', last_name: 'Johnson' },
-  },
-  {
-    id: '2',
-    title: 'Data Structures Overview',
-    description: 'Introduction to arrays, linked lists, and trees',
-    material_type: 'lecture_notes',
-    file_url: '/materials/cs201-overview.pdf',
-    file_size: 3145728,
-    file_type: 'application/pdf',
-    created_at: '2024-11-05T14:00:00Z',
-    course: { name: 'Data Structures and Algorithms', course_code: 'CS201' },
-    uploaded_by_user: { first_name: 'Prof. Michael', last_name: 'Chen' },
-  },
-  {
-    id: '3',
-    title: 'HTML & CSS Basics',
-    description: 'Building your first webpage',
-    material_type: 'video',
-    file_url: '/materials/cs301-html-css.mp4',
-    file_size: 52428800,
-    file_type: 'video/mp4',
-    created_at: '2024-11-08T09:00:00Z',
-    course: { name: 'Web Development', course_code: 'CS301' },
-    uploaded_by_user: { first_name: 'Dr. Emily', last_name: 'Rodriguez' },
-  },
-  {
-    id: '4',
-    title: 'SQL Query Assignment',
-    description: 'Practice SQL queries and database design',
-    material_type: 'assignment',
-    file_url: '/materials/cs302-assignment1.pdf',
-    file_size: 1048576,
-    file_type: 'application/pdf',
-    due_date: '2024-12-15T23:59:00Z',
-    created_at: '2024-11-10T11:00:00Z',
-    course: { name: 'Database Systems', course_code: 'CS302' },
-    uploaded_by_user: { first_name: 'Prof. David', last_name: 'Kim' },
-  },
-  {
-    id: '5',
-    title: 'Project Starter Code',
-    description: 'Boilerplate code for final project',
-    material_type: 'other',
-    file_url: '/materials/cs301-project-starter.zip',
-    file_size: 10485760,
-    file_type: 'application/zip',
-    created_at: '2024-11-12T15:00:00Z',
-    course: { name: 'Web Development', course_code: 'CS301' },
-    uploaded_by_user: { first_name: 'Dr. Emily', last_name: 'Rodriguez' },
-  },
-  {
-    id: '6',
-    title: 'Algorithm Analysis Slides',
-    description: 'Big O notation and complexity analysis',
-    material_type: 'lecture_notes',
-    file_url: '/materials/cs201-algorithms.pptx',
-    file_size: 4194304,
-    file_type: 'application/vnd.ms-powerpoint',
-    created_at: '2024-11-15T10:00:00Z',
-    course: { name: 'Data Structures and Algorithms', course_code: 'CS201' },
-    uploaded_by_user: { first_name: 'Prof. Michael', last_name: 'Chen' },
-  },
-];
+interface CourseMaterial {
+  courseId: string;
+  courseName: string;
+  courseCode: string;
+  fileCount: number;
+  files: Array<{
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    uploadedAt: string;
+    url: string;
+    materialType: string;
+  }>;
+}
 
-const fileTypeIcons = {
+const fileTypeIcons: Record<string, any> = {
   'application/pdf': File,
   'video/mp4': Video,
   'application/zip': FileArchive,
   'application/vnd.ms-powerpoint': FileText,
 };
 
-const materialTypeColors = {
+const materialTypeColors: Record<string, string> = {
   lecture_notes: 'bg-blue-100 text-blue-800',
   video: 'bg-purple-100 text-purple-800',
   assignment: 'bg-orange-100 text-orange-800',
@@ -115,30 +58,37 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function StudentMaterials() {
+  const { getToken } = useAuth();
+  const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCourses, setExpandedCourses] = useState<string[]>([]);
 
-  // Group materials by course
-  const materialsByCourse = mockMaterials.reduce((acc, material) => {
-    const courseCode = material.course.course_code;
-    if (!acc[courseCode]) {
-      acc[courseCode] = {
-        course: material.course,
-        materials: [],
-      };
-    }
-    acc[courseCode].materials.push(material);
-    return acc;
-  }, {} as Record<string, { course: any; materials: any[] }>);
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
 
-  // Filter materials
-  const filteredCourses = Object.entries(materialsByCourse).filter(([_, data]) => {
-    return data.materials.some(
-      (m) =>
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  async function fetchMaterials() {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getCourseMaterials(getToken);
+      
+      if (response.success) {
+        setMaterials(response.data);
+        // Auto-expand all courses by default
+        setExpandedCourses(response.data.map((m: CourseMaterial) => m.courseCode));
+      } else {
+        setError(response.error || 'Failed to fetch materials');
+      }
+    } catch (err: any) {
+      console.error('Error fetching materials:', err);
+      setError(err.message || 'An error occurred while fetching materials');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const toggleCourse = (courseCode: string) => {
     setExpandedCourses((prev) =>
@@ -147,6 +97,45 @@ export default function StudentMaterials() {
         : [...prev, courseCode]
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading course materials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="flex items-start">
+          <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+          <div className="ml-4">
+            <h3 className="text-lg font-semibold text-red-900">Error Loading Materials</h3>
+            <p className="text-red-700 mt-1">{error}</p>
+            <button
+              onClick={() => fetchMaterials()}
+              className="mt-3 text-red-600 hover:text-red-700 font-medium"
+            >
+              Try Again →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter materials based on search query
+  const filteredMaterials = materials.map(course => ({
+    ...course,
+    files: course.files.filter(file =>
+      file.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(course => course.files.length > 0);
 
   return (
     <div className="space-y-6">
@@ -170,19 +159,15 @@ export default function StudentMaterials() {
         />
       </div>
 
+
       {/* Materials by Course */}
       <div className="space-y-4">
-        {filteredCourses.map(([courseCode, data], index) => {
-          const isExpanded = expandedCourses.includes(courseCode);
-          const filteredMaterials = data.materials.filter(
-            (m) =>
-              m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              m.description?.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+        {filteredMaterials.map((courseData, index) => {
+          const isExpanded = expandedCourses.includes(courseData.courseCode);
 
           return (
             <motion.div
-              key={courseCode}
+              key={courseData.courseCode}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
@@ -190,17 +175,17 @@ export default function StudentMaterials() {
             >
               {/* Course Header */}
               <button
-                onClick={() => toggleCourse(courseCode)}
+                onClick={() => toggleCourse(courseData.courseCode)}
                 className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center">
                   <BookOpen className="h-5 w-5 text-indigo-600 mr-3" />
                   <div className="text-left">
                     <h3 className="font-semibold text-gray-900">
-                      {courseCode} - {data.course.name}
+                      {courseData.courseCode} - {courseData.courseName}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {filteredMaterials.length} material{filteredMaterials.length !== 1 ? 's' : ''}
+                      {courseData.files.length} material{courseData.files.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
@@ -214,13 +199,12 @@ export default function StudentMaterials() {
               {/* Materials List */}
               {isExpanded && (
                 <div className="border-t border-gray-200">
-                  {filteredMaterials.map((material, idx) => {
-                    const FileIcon =
-                      fileTypeIcons[material.file_type as keyof typeof fileTypeIcons] || File;
+                  {courseData.files.map((file, idx) => {
+                    const FileIcon = fileTypeIcons[file.type] || File;
 
                     return (
                       <motion.div
-                        key={material.id}
+                        key={file.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
@@ -232,42 +216,32 @@ export default function StudentMaterials() {
                               <FileIcon className="h-5 w-5 text-indigo-600" />
                             </div>
                             <div className="ml-4 flex-1">
-                              <h4 className="font-semibold text-gray-900">{material.title}</h4>
-                              {material.description && (
-                                <p className="text-sm text-gray-600 mt-1">{material.description}</p>
-                              )}
+                              <h4 className="font-semibold text-gray-900">{file.name}</h4>
                               <div className="flex items-center gap-4 mt-2">
                                 <span
                                   className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                    materialTypeColors[
-                                      material.material_type as keyof typeof materialTypeColors
-                                    ]
+                                    materialTypeColors[file.materialType] || materialTypeColors.other
                                   }`}
                                 >
-                                  {material.material_type.replace('_', ' ')}
+                                  {file.materialType.replace('_', ' ')}
                                 </span>
                                 <span className="text-xs text-gray-500">
-                                  {formatFileSize(material.file_size)}
+                                  {formatFileSize(file.size)}
                                 </span>
                                 <span className="text-xs text-gray-500">
-                                  {new Date(material.created_at).toLocaleDateString()}
+                                  {new Date(file.uploadedAt).toLocaleDateString()}
                                 </span>
-                                {material.due_date && (
-                                  <span className="text-xs text-orange-600 font-semibold">
-                                    Due: {new Date(material.due_date).toLocaleDateString()}
-                                  </span>
-                                )}
                               </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Uploaded by {material.uploaded_by_user.first_name}{' '}
-                                {material.uploaded_by_user.last_name}
-                              </p>
                             </div>
                           </div>
-                          <button className="ml-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg hover:from-indigo-600 hover:to-blue-600 transition-all">
+                          <a
+                            href={file.url}
+                            download
+                            className="ml-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg hover:from-indigo-600 hover:to-blue-600 transition-all"
+                          >
                             <Download className="h-4 w-4" />
                             Download
-                          </button>
+                          </a>
                         </div>
                       </motion.div>
                     );
@@ -279,7 +253,7 @@ export default function StudentMaterials() {
         })}
       </div>
 
-      {filteredCourses.length === 0 && (
+      {filteredMaterials.length === 0 && (
         <div className="text-center py-12 bg-white rounded-2xl">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">No materials found</p>

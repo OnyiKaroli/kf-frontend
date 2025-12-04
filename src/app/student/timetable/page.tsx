@@ -1,211 +1,120 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Loader2, AlertCircle } from 'lucide-react';
+import { getTimetable } from '@/lib/student-api';
 
-// Mock data - replace with API calls
-const mockTimetable = [
-  {
-    id: '1',
-    day_of_week: 1, // Monday
-    start_time: '09:00:00',
-    end_time: '10:30:00',
-    room_number: '101',
-    building: 'Science Building',
-    session_type: 'lecture',
-    course: {
-      name: 'Introduction to Computer Science',
-      course_code: 'CS101',
-      instructor: { first_name: 'Dr. Sarah', last_name: 'Johnson' },
-    },
-  },
-  {
-    id: '2',
-    day_of_week: 1,
-    start_time: '11:00:00',
-    end_time: '12:30:00',
-    room_number: '205',
-    building: 'Engineering Hall',
-    session_type: 'lab',
-    course: {
-      name: 'Data Structures and Algorithms',
-      course_code: 'CS201',
-      instructor: { first_name: 'Prof. Michael', last_name: 'Chen' },
-    },
-  },
-  {
-    id: '3',
-    day_of_week: 2, // Tuesday
-    start_time: '10:00:00',
-    end_time: '11:30:00',
-    room_number: '301',
-    building: 'Technology Center',
-    session_type: 'lecture',
-    course: {
-      name: 'Web Development',
-      course_code: 'CS301',
-      instructor: { first_name: 'Dr. Emily', last_name: 'Rodriguez' },
-    },
-  },
-  {
-    id: '4',
-    day_of_week: 3, // Wednesday
-    start_time: '09:00:00',
-    end_time: '10:30:00',
-    room_number: '101',
-    building: 'Science Building',
-    session_type: 'lecture',
-    course: {
-      name: 'Introduction to Computer Science',
-      course_code: 'CS101',
-      instructor: { first_name: 'Dr. Sarah', last_name: 'Johnson' },
-    },
-  },
-  {
-    id: '5',
-    day_of_week: 3,
-    start_time: '14:00:00',
-    end_time: '15:30:00',
-    room_number: '402',
-    building: 'Engineering Hall',
-    session_type: 'lecture',
-    course: {
-      name: 'Database Systems',
-      course_code: 'CS302',
-      instructor: { first_name: 'Prof. David', last_name: 'Kim' },
-    },
-  },
-  {
-    id: '6',
-    day_of_week: 4, // Thursday
-    start_time: '10:00:00',
-    end_time: '11:30:00',
-    room_number: '301',
-    building: 'Technology Center',
-    session_type: 'lab',
-    course: {
-      name: 'Web Development',
-      course_code: 'CS301',
-      instructor: { first_name: 'Dr. Emily', last_name: 'Rodriguez' },
-    },
-  },
-  {
-    id: '7',
-    day_of_week: 5, // Friday
-    start_time: '11:00:00',
-    end_time: '12:30:00',
-    room_number: '205',
-    building: 'Engineering Hall',
-    session_type: 'lecture',
-    course: {
-      name: 'Data Structures and Algorithms',
-      course_code: 'CS201',
-      instructor: { first_name: 'Prof. Michael', last_name: 'Chen' },
-    },
-  },
-  {
-    id: '8',
-    day_of_week: 5,
-    start_time: '14:00:00',
-    end_time: '15:30:00',
-    room_number: '402',
-    building: 'Engineering Hall',
-    session_type: 'lab',
-    course: {
-      name: 'Database Systems',
-      course_code: 'CS302',
-      instructor: { first_name: 'Prof. David', last_name: 'Kim' },
-    },
-  },
-];
-
-const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-const sessionTypeColors = {
-  lecture: 'bg-blue-100 text-blue-800 border-blue-200',
-  lab: 'bg-purple-100 text-purple-800 border-purple-200',
-  tutorial: 'bg-green-100 text-green-800 border-green-200',
-  seminar: 'bg-orange-100 text-orange-800 border-orange-200',
-  workshop: 'bg-pink-100 text-pink-800 border-pink-200',
-};
-
-const courseColors = [
-  'from-blue-500 to-indigo-600',
-  'from-purple-500 to-pink-600',
-  'from-green-500 to-emerald-600',
-  'from-orange-500 to-red-600',
-  'from-cyan-500 to-blue-600',
-];
-
-function formatTime(time: string): string {
-  const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${ampm}`;
+interface TimetableEntry {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room_number: string;
+  building: string;
+  course: {
+    name: string;
+    course_code: string;
+    instructor: {
+      first_name: string;
+      last_name: string;
+    };
+  };
 }
 
-export default function StudentTimetable() {
-  // Group timetable by day
-  const timetableByDay = mockTimetable.reduce((acc, entry) => {
-    if (!acc[entry.day_of_week]) {
-      acc[entry.day_of_week] = [];
-    }
-    acc[entry.day_of_week].push(entry);
-    return acc;
-  }, {} as Record<number, typeof mockTimetable>);
+const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const workDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-  // Sort entries by start time
-  Object.keys(timetableByDay).forEach((day) => {
-    timetableByDay[parseInt(day)].sort((a, b) => a.start_time.localeCompare(b.start_time));
+export default function StudentTimetable() {
+  const { getToken } = useAuth();
+  const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchTimetable();
+  }, []);
+
+  async function fetchTimetable() {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getTimetable(getToken);
+      
+      if (response.success) {
+        setTimetable(response.data);
+      } else {
+        setError(response.error || 'Failed to fetch timetable');
+      }
+    } catch (err: any) {
+      console.error('Error fetching timetable:', err);
+      setError(err.message || 'An error occurred while fetching timetable');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading your timetable...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="flex items-start">
+          <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+          <div className="ml-4">
+            <h3 className="text-lg font-semibold text-red-900">Error Loading Timetable</h3>
+            <p className="text-red-700 mt-1">{error}</p>
+            <button
+              onClick={() => fetchTimetable()}
+              className="mt-3 text-red-600 hover:text-red-700 font-medium"
+            >
+              Try Again →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Group timetable by day
+  const timetableByDay = workDays.map(day => {
+    const dayIndex = days.indexOf(day);
+    const classes = timetable.filter(entry => entry.day_of_week === dayIndex);
+    return { day, classes };
   });
 
-  // Get current day
-  const currentDay = new Date().getDay();
+  const currentDay = days[new Date().getDay()];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Class Timetable</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Class Schedule</h1>
         <p className="mt-2 text-gray-600">
-          Your weekly class schedule
+          Your weekly timetable for this semester
         </p>
       </div>
 
-      {/* Current Day Highlight */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-indigo-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-indigo-100 text-sm font-medium">Today is</p>
-            <p className="text-2xl font-bold mt-1">{daysOfWeek[currentDay]}</p>
-            <p className="text-indigo-100 text-sm mt-1">
-              {new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </p>
-          </div>
-          <Calendar className="h-12 w-12 text-white/80" />
-        </div>
-      </motion.div>
-
-      {/* Weekly Schedule */}
-      <div className="space-y-4">
-        {[1, 2, 3, 4, 5].map((day, index) => {
-          const dayEntries = timetableByDay[day] || [];
+      {/* Timetable Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {timetableByDay.map(({ day, classes }, index) => {
           const isToday = day === currentDay;
 
           return (
             <motion.div
               key={day}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className={`bg-white rounded-2xl shadow-md overflow-hidden ${
                 isToday ? 'ring-2 ring-indigo-500' : ''
@@ -213,71 +122,56 @@ export default function StudentTimetable() {
             >
               {/* Day Header */}
               <div
-                className={`px-6 py-4 ${
+                className={`px-4 py-3 ${
                   isToday
-                    ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white'
-                    : 'bg-gray-50'
+                    ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white'
+                    : 'bg-gray-50 text-gray-900'
                 }`}
               >
-                <h2 className={`text-lg font-bold ${isToday ? 'text-white' : 'text-gray-900'}`}>
-                  {daysOfWeek[day]}
-                  {isToday && <span className="ml-2 text-sm font-normal">(Today)</span>}
-                </h2>
-                <p className={`text-sm ${isToday ? 'text-indigo-100' : 'text-gray-500'}`}>
-                  {dayEntries.length} class{dayEntries.length !== 1 ? 'es' : ''}
-                </p>
+                <h3 className="font-semibold text-center">{day}</h3>
+                {isToday && (
+                  <p className="text-xs text-center text-white/80 mt-1">Today</p>
+                )}
               </div>
 
               {/* Classes */}
-              <div className="p-6 space-y-4">
-                {dayEntries.length > 0 ? (
-                  dayEntries.map((entry, idx) => (
-                    <div
+              <div className="p-3 space-y-2">
+                {classes.length > 0 ? (
+                  classes.map((entry, idx) => (
+                    <motion.div
                       key={entry.id}
-                      className={`p-4 rounded-xl border-2 bg-gradient-to-r ${
-                        courseColors[idx % courseColors.length]
-                      } bg-opacity-5 hover:shadow-md transition-all`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 hover:shadow-md transition-shadow"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-bold text-gray-900">
-                              {entry.course.course_code}
-                            </span>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold border ${
-                                sessionTypeColors[
-                                  entry.session_type as keyof typeof sessionTypeColors
-                                ]
-                              }`}
-                            >
-                              {entry.session_type.charAt(0).toUpperCase() +
-                                entry.session_type.slice(1)}
-                            </span>
-                          </div>
-                          <h3 className="font-semibold text-gray-900 mb-3">
-                            {entry.course.name}
-                          </h3>
-                          <div className="space-y-2">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Clock className="h-4 w-4 mr-2 text-indigo-600" />
-                              {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <MapPin className="h-4 w-4 mr-2 text-indigo-600" />
-                              {entry.building}, Room {entry.room_number}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <User className="h-4 w-4 mr-2 text-indigo-600" />
-                              {entry.course.instructor.first_name} {entry.course.instructor.last_name}
-                            </div>
-                          </div>
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm text-gray-900">
+                          {entry.course.course_code}
+                        </h4>
+                        <p className="text-xs text-gray-600">{entry.course.name}</p>
+                        
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {entry.start_time} - {entry.end_time}
+                        </div>
+                        
+                        <div className="flex items-center text-xs text-gray-500">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {entry.building} {entry.room_number}
+                        </div>
+                        
+                        <div className="flex items-center text-xs text-gray-500">
+                          <User className="h-3 w-3 mr-1" />
+                          {entry.course.instructor.first_name} {entry.course.instructor.last_name}
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500 py-8">No classes scheduled</p>
+                  <div className="text-center py-8 text-gray-400 text-sm">
+                    No classes
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -285,23 +179,12 @@ export default function StudentTimetable() {
         })}
       </div>
 
-      {/* Weekend Notice */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="bg-green-50 border border-green-200 rounded-2xl p-6"
-      >
-        <div className="flex items-start">
-          <Calendar className="h-6 w-6 text-green-600 mt-0.5" />
-          <div className="ml-4">
-            <h3 className="text-lg font-semibold text-green-900">Weekend Break</h3>
-            <p className="text-green-700 mt-1">
-              No classes scheduled on Saturday and Sunday. Enjoy your weekend!
-            </p>
-          </div>
+      {timetable.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-2xl">
+          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">No classes scheduled</p>
         </div>
-      </motion.div>
+      )}
     </div>
   );
 }

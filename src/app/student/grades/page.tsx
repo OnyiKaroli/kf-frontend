@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import {
   Award,
   TrendingUp,
@@ -9,66 +10,28 @@ import {
   FileText,
   Download,
   Filter,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
+import { getGrades, getAcademicPerformance } from '@/lib/student-api';
 
-// Mock data - replace with API calls
-const mockGrades = [
-  {
-    id: '1',
-    marks_obtained: 85,
-    total_marks: 100,
-    percentage: 85,
-    letter_grade: 'A',
-    grade_points: 4.0,
-    graded_at: '2024-11-15T10:00:00Z',
-    course: { name: 'Introduction to Computer Science', course_code: 'CS101', credits: 3 },
-    exam: { title: 'Midterm Exam', exam_type: 'midterm', total_marks: 100 },
-  },
-  {
-    id: '2',
-    marks_obtained: 92,
-    total_marks: 100,
-    percentage: 92,
-    letter_grade: 'A+',
-    grade_points: 4.0,
-    graded_at: '2024-11-20T14:00:00Z',
-    course: { name: 'Database Systems', course_code: 'CS302', credits: 4 },
-    exam: { title: 'Quiz 1', exam_type: 'quiz', total_marks: 100 },
-  },
-  {
-    id: '3',
-    marks_obtained: 78,
-    total_marks: 100,
-    percentage: 78,
-    letter_grade: 'B+',
-    grade_points: 3.3,
-    graded_at: '2024-11-18T09:00:00Z',
-    course: { name: 'Data Structures and Algorithms', course_code: 'CS201', credits: 4 },
-    exam: { title: 'Assignment 1', exam_type: 'assignment', total_marks: 100 },
-  },
-  {
-    id: '4',
-    marks_obtained: 88,
-    total_marks: 100,
-    percentage: 88,
-    letter_grade: 'A',
-    grade_points: 4.0,
-    graded_at: '2024-11-22T11:00:00Z',
-    course: { name: 'Web Development', course_code: 'CS301', credits: 3 },
-    exam: { title: 'Project 1', exam_type: 'assignment', total_marks: 100 },
-  },
-  {
-    id: '5',
-    marks_obtained: 95,
-    total_marks: 100,
-    percentage: 95,
-    letter_grade: 'A+',
-    grade_points: 4.0,
-    graded_at: '2024-10-30T13:00:00Z',
-    course: { name: 'Calculus I', course_code: 'MATH101', credits: 4 },
-    exam: { title: 'Final Exam', exam_type: 'final', total_marks: 100 },
-  },
-];
+interface Grade {
+  id: string;
+  marks_obtained: number;
+  total_marks: number;
+  letter_grade: string;
+  grade_points: string;
+  graded_at: string;
+  course: { name: string; course_code: string; credits: number };
+  exam: { title: string; exam_type: string; total_marks: number };
+}
+
+interface Performance {
+  gpa: string;
+  totalCourses: number;
+  completedCourses: number;
+  totalCredits: number;
+}
 
 const gradeColors = {
   'A+': 'bg-green-100 text-green-800 border-green-200',
@@ -93,25 +56,87 @@ const examTypeColors = {
 };
 
 export default function StudentGrades() {
+  const { getToken } = useAuth();
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [performance, setPerformance] = useState<Performance | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState('all');
 
-  // Calculate GPA
-  const totalGradePoints = mockGrades.reduce((sum, grade) => sum + grade.grade_points, 0);
-  const gpa = (totalGradePoints / mockGrades.length).toFixed(2);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [gradesRes, perfRes] = await Promise.all([
+        getGrades(getToken),
+        getAcademicPerformance(getToken)
+      ]);
+      
+      if (gradesRes.success) {
+        setGrades(gradesRes.data);
+      } else {
+        setError(gradesRes.error || 'Failed to fetch grades');
+      }
+      
+      if (perfRes.success) {
+        setPerformance(perfRes.data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching grades:', err);
+      setError(err.message || 'An error occurred while fetching grades');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading your grades...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="flex items-start">
+          <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+          <div className="ml-4">
+            <h3 className="text-lg font-semibold text-red-900">Error Loading Grades</h3>
+            <p className="text-red-700 mt-1">{error}</p>
+            <button
+              onClick={() => fetchData()}
+              className="mt-3 text-red-600 hover:text-red-700 font-medium"
+            >
+              Try Again →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate average percentage
-  const avgPercentage = (
-    mockGrades.reduce((sum, grade) => sum + grade.percentage, 0) / mockGrades.length
-  ).toFixed(1);
+  const avgPercentage = grades.length > 0
+    ? (grades.reduce((sum, grade) => sum + ((grade.marks_obtained / grade.total_marks) * 100), 0) / grades.length).toFixed(1)
+    : '0.0';
 
   // Get unique courses
-  const courses = Array.from(new Set(mockGrades.map((g) => g.course.course_code)));
+  const courses = Array.from(new Set(grades.map((g) => g.course.course_code)));
 
   // Filter grades
-  const filteredGrades =
-    selectedCourse === 'all'
-      ? mockGrades
-      : mockGrades.filter((g) => g.course.course_code === selectedCourse);
+  const filteredGrades = selectedCourse === 'all'
+    ? grades
+    : grades.filter((g) => g.course.course_code === selectedCourse);
 
   return (
     <div className="space-y-6">
@@ -133,7 +158,7 @@ export default function StudentGrades() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium">Current GPA</p>
-              <p className="text-4xl font-bold mt-2">{gpa}</p>
+              <p className="text-4xl font-bold mt-2">{performance?.gpa || '0.00'}</p>
               <p className="text-green-100 text-sm mt-1">Out of 4.0</p>
             </div>
             <div className="bg-white/20 p-4 rounded-xl">
@@ -169,7 +194,7 @@ export default function StudentGrades() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Total Assessments</p>
-              <p className="text-4xl font-bold mt-2">{mockGrades.length}</p>
+              <p className="text-4xl font-bold mt-2">{grades.length}</p>
               <p className="text-purple-100 text-sm mt-1">Graded items</p>
             </div>
             <div className="bg-white/20 p-4 rounded-xl">
@@ -203,90 +228,93 @@ export default function StudentGrades() {
       </div>
 
       {/* Grades Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="bg-white rounded-2xl shadow-md overflow-hidden"
-      >
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Course
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Assessment
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Score
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Grade
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredGrades.map((grade, index) => (
-                <motion.tr
-                  key={grade.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {grade.course.course_code}
-                      </div>
-                      <div className="text-sm text-gray-500">{grade.course.name}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{grade.exam.title}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${examTypeColors[grade.exam.exam_type as keyof typeof examTypeColors]}`}>
-                      {grade.exam.exam_type.charAt(0).toUpperCase() + grade.exam.exam_type.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {grade.marks_obtained}/{grade.total_marks}
-                    </div>
-                    <div className="text-xs text-gray-500">{grade.percentage}%</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-4 py-2 rounded-lg text-sm font-bold border-2 ${gradeColors[grade.letter_grade as keyof typeof gradeColors]}`}>
-                      {grade.letter_grade}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(grade.graded_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </motion.div>
-
-      {filteredGrades.length === 0 && (
+      {filteredGrades.length > 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-2xl shadow-md overflow-hidden"
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Course
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Assessment
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Grade
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredGrades.map((grade, index) => {
+                  const percentage = ((grade.marks_obtained / grade.total_marks) * 100).toFixed(1);
+                  return (
+                    <motion.tr
+                      key={grade.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {grade.course.course_code}
+                          </div>
+                          <div className="text-sm text-gray-500">{grade.course.name}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">{grade.exam.title}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${examTypeColors[grade.exam.exam_type as keyof typeof examTypeColors] || 'bg-gray-100 text-gray-800'}`}>
+                          {grade.exam.exam_type.charAt(0).toUpperCase() + grade.exam.exam_type.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {grade.marks_obtained}/{grade.total_marks}
+                        </div>
+                        <div className="text-xs text-gray-500">{percentage}%</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-4 py-2 rounded-lg text-sm font-bold border-2 ${gradeColors[grade.letter_grade as keyof typeof gradeColors] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                          {grade.letter_grade}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(grade.graded_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      ) : (
         <div className="text-center py-12 bg-white rounded-2xl">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No grades available for the selected course</p>
+          <p className="text-gray-500">No grades available{selectedCourse !== 'all' ? ' for the selected course' : ''}</p>
         </div>
       )}
     </div>
