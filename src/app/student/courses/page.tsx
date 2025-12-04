@@ -1,116 +1,36 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import {
   BookOpen,
   Users,
-  Clock,
-  MapPin,
   Search,
   Calendar,
   GraduationCap,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
+import { getEnrolledCourses, dropCourse } from '@/lib/student-api';
 
-// Mock data - replace with API calls
-const mockCourses = [
-  {
-    id: '1',
-    enrollment_id: 'e1',
-    status: 'enrolled',
-    course: {
-      id: 'c1',
-      course_code: 'CS101',
-      name: 'Introduction to Computer Science',
-      credits: 3,
-      current_enrollment: 45,
-      max_capacity: 50,
-      semester: 'fall',
-      academic_year: '2024-2025',
-      department: { name: 'Computer Science', code: 'CS' },
-      instructor: { first_name: 'Dr. Sarah', last_name: 'Johnson', email: 'sarah.j@university.edu' },
-    },
-    grade_points: null,
-    attendance_percentage: 92,
-  },
-  {
-    id: '2',
-    enrollment_id: 'e2',
-    status: 'enrolled',
-    course: {
-      id: 'c2',
-      course_code: 'CS201',
-      name: 'Data Structures and Algorithms',
-      credits: 4,
-      current_enrollment: 38,
-      max_capacity: 40,
-      semester: 'fall',
-      academic_year: '2024-2025',
-      department: { name: 'Computer Science', code: 'CS' },
-      instructor: { first_name: 'Prof. Michael', last_name: 'Chen', email: 'michael.c@university.edu' },
-    },
-    grade_points: null,
-    attendance_percentage: 88,
-  },
-  {
-    id: '3',
-    enrollment_id: 'e3',
-    status: 'enrolled',
-    course: {
-      id: 'c3',
-      course_code: 'CS301',
-      name: 'Web Development',
-      credits: 3,
-      current_enrollment: 42,
-      max_capacity: 45,
-      semester: 'fall',
-      academic_year: '2024-2025',
-      department: { name: 'Computer Science', code: 'CS' },
-      instructor: { first_name: 'Dr. Emily', last_name: 'Rodriguez', email: 'emily.r@university.edu' },
-    },
-    grade_points: null,
-    attendance_percentage: 95,
-  },
-  {
-    id: '4',
-    enrollment_id: 'e4',
-    status: 'enrolled',
-    course: {
-      id: 'c4',
-      course_code: 'CS302',
-      name: 'Database Systems',
-      credits: 4,
-      current_enrollment: 35,
-      max_capacity: 40,
-      semester: 'fall',
-      academic_year: '2024-2025',
-      department: { name: 'Computer Science', code: 'CS' },
-      instructor: { first_name: 'Prof. David', last_name: 'Kim', email: 'david.k@university.edu' },
-    },
-    grade_points: null,
-    attendance_percentage: 90,
-  },
-  {
-    id: '5',
-    enrollment_id: 'e5',
-    status: 'completed',
-    course: {
-      id: 'c5',
-      course_code: 'MATH101',
-      name: 'Calculus I',
-      credits: 4,
-      current_enrollment: 50,
-      max_capacity: 50,
-      semester: 'spring',
-      academic_year: '2023-2024',
-      department: { name: 'Mathematics', code: 'MATH' },
-      instructor: { first_name: 'Dr. Lisa', last_name: 'Anderson', email: 'lisa.a@university.edu' },
-    },
-    grade_points: 3.7,
-    grade: 'A-',
-    attendance_percentage: 94,
-  },
-];
+interface Enrollment {
+  id: string;
+  status: string;
+  grade_points: string | null;
+  course: {
+    id: string;
+    course_code: string;
+    name: string;
+    credits: number;
+    current_enrollment: number;
+    max_capacity: number;
+    semester: string;
+    academic_year: string;
+    department: { name: string; code: string };
+    instructor: { first_name: string; last_name: string; email: string };
+  };
+}
 
 const statusColors = {
   enrolled: 'bg-green-100 text-green-800',
@@ -119,16 +39,97 @@ const statusColors = {
 };
 
 export default function StudentCourses() {
+  const { getToken } = useAuth();
+  const [courses, setCourses] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [droppingCourse, setDroppingCourse] = useState<string | null>(null);
 
-  const filteredCourses = mockCourses.filter((enrollment) => {
+  useEffect(() => {
+    fetchCourses();
+  }, [statusFilter]);
+
+  async function fetchCourses() {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getEnrolledCourses(getToken, statusFilter);
+      
+      if (response.success) {
+        setCourses(response.data);
+      } else {
+        setError(response.error || 'Failed to fetch courses');
+      }
+    } catch (err: any) {
+      console.error('Error fetching courses:', err);
+      setError(err.message || 'An error occurred while fetching courses');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDropCourse(enrollmentId: string) {
+    if (!confirm('Are you sure you want to drop this course?')) {
+      return;
+    }
+
+    try {
+      setDroppingCourse(enrollmentId);
+      const response = await dropCourse(getToken, enrollmentId);
+      
+      if (response.success) {
+        // Refresh courses list
+        await fetchCourses();
+      } else {
+        alert(response.error || 'Failed to drop course');
+      }
+    } catch (err: any) {
+      console.error('Error dropping course:', err);
+      alert(err.message || 'An error occurred while dropping the course');
+    } finally {
+      setDroppingCourse(null);
+    }
+  }
+
+  const filteredCourses = courses.filter((enrollment) => {
     const matchesSearch =
       enrollment.course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       enrollment.course.course_code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || enrollment.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading your courses...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="flex items-start">
+          <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+          <div className="ml-4">
+            <h3 className="text-lg font-semibold text-red-900">Error Loading Courses</h3>
+            <p className="text-red-700 mt-1">{error}</p>
+            <button
+              onClick={() => fetchCourses()}
+              className="mt-3 text-red-600 hover:text-red-700 font-medium"
+            >
+              Try Again →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -222,11 +223,6 @@ export default function StudentCourses() {
                   <Users className="h-4 w-4 mr-2" />
                   {enrollment.course.current_enrollment}/{enrollment.course.max_capacity} Students
                 </div>
-                {enrollment.attendance_percentage && (
-                  <div className="text-gray-600">
-                    Attendance: {enrollment.attendance_percentage}%
-                  </div>
-                )}
               </div>
 
               {/* Semester */}
@@ -236,18 +232,12 @@ export default function StudentCourses() {
               </div>
 
               {/* Grade (if completed) */}
-              {enrollment.status === 'completed' && enrollment.grade && (
+              {enrollment.status === 'completed' && enrollment.grade_points && (
                 <div className="pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Final Grade:</span>
-                    <span className="text-lg font-bold text-green-600">{enrollment.grade}</span>
+                    <span className="text-sm text-gray-600">Grade Points:</span>
+                    <span className="text-lg font-bold text-green-600">{enrollment.grade_points}</span>
                   </div>
-                  {enrollment.grade_points && (
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-sm text-gray-600">Grade Points:</span>
-                      <span className="text-sm font-semibold text-gray-900">{enrollment.grade_points}</span>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -257,8 +247,12 @@ export default function StudentCourses() {
                   View Details
                 </button>
                 {enrollment.status === 'enrolled' && (
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
-                    Drop Course
+                  <button
+                    onClick={() => handleDropCourse(enrollment.id)}
+                    disabled={droppingCourse === enrollment.id}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {droppingCourse === enrollment.id ? 'Dropping...' : 'Drop Course'}
                   </button>
                 )}
               </div>

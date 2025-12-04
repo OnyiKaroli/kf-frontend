@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 import {
   BookOpen,
@@ -9,77 +11,122 @@ import {
   Clock,
   Award,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
+import { getStudentDashboard } from '@/lib/student-api';
 
-// Mock data - replace with API calls
-const mockDashboardData = {
-  enrolledCourses: 5,
-  upcomingExams: [
-    {
-      id: '1',
-      title: 'Data Structures Midterm',
-      course: { name: 'Data Structures', course_code: 'CS201' },
-      scheduled_date: '2025-12-10T10:00:00Z',
-      exam_location: 'Room 301',
-    },
-    {
-      id: '2',
-      title: 'Web Development Final',
-      course: { name: 'Web Development', course_code: 'CS301' },
-      scheduled_date: '2025-12-15T14:00:00Z',
-      exam_location: 'Room 205',
-    },
-  ],
-  recentGrades: [
-    {
-      id: '1',
-      marks_obtained: 85,
-      total_marks: 100,
-      letter_grade: 'A',
-      course: { name: 'Introduction to CS', course_code: 'CS101' },
-      exam: { title: 'Midterm Exam', exam_type: 'midterm' },
-    },
-    {
-      id: '2',
-      marks_obtained: 92,
-      total_marks: 100,
-      letter_grade: 'A+',
-      course: { name: 'Database Systems', course_code: 'CS302' },
-      exam: { title: 'Quiz 1', exam_type: 'quiz' },
-    },
-  ],
-  gpa: '3.75',
-  pendingAssignments: 3,
-};
-
-const stats = [
-  {
-    name: 'Enrolled Courses',
-    value: mockDashboardData.enrolledCourses,
-    icon: BookOpen,
-    color: 'from-blue-500 to-indigo-600',
-  },
-  {
-    name: 'Current GPA',
-    value: mockDashboardData.gpa,
-    icon: TrendingUp,
-    color: 'from-green-500 to-emerald-600',
-  },
-  {
-    name: 'Pending Assignments',
-    value: mockDashboardData.pendingAssignments,
-    icon: FileText,
-    color: 'from-orange-500 to-red-600',
-  },
-  {
-    name: 'Upcoming Exams',
-    value: mockDashboardData.upcomingExams.length,
-    icon: Calendar,
-    color: 'from-purple-500 to-pink-600',
-  },
-];
+interface DashboardData {
+  enrolledCourses: number;
+  upcomingExams: Array<{
+    id: string;
+    title: string;
+    course: { name: string; course_code: string };
+    scheduled_date: string;
+    exam_location: string;
+  }>;
+  recentGrades: Array<{
+    id: string;
+    marks_obtained: number;
+    total_marks: number;
+    letter_grade: string;
+    course: { name: string; course_code: string };
+    exam: { title: string; exam_type: string };
+  }>;
+  gpa: string;
+  pendingAssignments: number;
+}
 
 export default function StudentDashboard() {
+  const { getToken } = useAuth();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getStudentDashboard(getToken);
+        
+        if (response.success) {
+          setDashboardData(response.data);
+        } else {
+          setError(response.error || 'Failed to fetch dashboard data');
+        }
+      } catch (err: any) {
+        console.error('Error fetching dashboard:', err);
+        setError(err.message || 'An error occurred while fetching dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDashboard();
+  }, [getToken]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="flex items-start">
+          <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+          <div className="ml-4">
+            <h3 className="text-lg font-semibold text-red-900">Error Loading Dashboard</h3>
+            <p className="text-red-700 mt-1">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 text-red-600 hover:text-red-700 font-medium"
+            >
+              Try Again →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) {
+    return null;
+  }
+
+  const stats = [
+    {
+      name: 'Enrolled Courses',
+      value: dashboardData.enrolledCourses,
+      icon: BookOpen,
+      color: 'from-blue-500 to-indigo-600',
+    },
+    {
+      name: 'Current GPA',
+      value: dashboardData.gpa,
+      icon: TrendingUp,
+      color: 'from-green-500 to-emerald-600',
+    },
+    {
+      name: 'Pending Assignments',
+      value: dashboardData.pendingAssignments,
+      icon: FileText,
+      color: 'from-orange-500 to-red-600',
+    },
+    {
+      name: 'Upcoming Exams',
+      value: dashboardData.upcomingExams.length,
+      icon: Calendar,
+      color: 'from-purple-500 to-pink-600',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -127,8 +174,8 @@ export default function StudentDashboard() {
             </h2>
           </div>
           <div className="space-y-4">
-            {mockDashboardData.upcomingExams.length > 0 ? (
-              mockDashboardData.upcomingExams.map((exam) => (
+            {dashboardData.upcomingExams.length > 0 ? (
+              dashboardData.upcomingExams.map((exam) => (
                 <div
                   key={exam.id}
                   className="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 hover:shadow-md transition-shadow"
@@ -174,8 +221,8 @@ export default function StudentDashboard() {
             </h2>
           </div>
           <div className="space-y-4">
-            {mockDashboardData.recentGrades.length > 0 ? (
-              mockDashboardData.recentGrades.map((grade) => (
+            {dashboardData.recentGrades.length > 0 ? (
+              dashboardData.recentGrades.map((grade) => (
                 <div
                   key={grade.id}
                   className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 hover:shadow-md transition-shadow"
@@ -247,7 +294,7 @@ export default function StudentDashboard() {
       </motion.div>
 
       {/* Pending Assignments Alert */}
-      {mockDashboardData.pendingAssignments > 0 && (
+      {dashboardData.pendingAssignments > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -258,7 +305,7 @@ export default function StudentDashboard() {
             <AlertCircle className="h-6 w-6 text-orange-600 mt-0.5" />
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-orange-900">
-                You have {mockDashboardData.pendingAssignments} pending assignment{mockDashboardData.pendingAssignments > 1 ? 's' : ''}
+                You have {dashboardData.pendingAssignments} pending assignment{dashboardData.pendingAssignments > 1 ? 's' : ''}
               </h3>
               <p className="text-orange-700 mt-1">
                 Don't forget to submit your assignments before the deadline!
