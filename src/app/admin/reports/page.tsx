@@ -15,15 +15,25 @@ import {
   Loader2,
 } from 'lucide-react';
 
-interface CourseStats {
-  stats: {
+interface ReportData {
+  courseStats: {
     total: number;
     active: number;
     completed: number;
     totalEnrollments: number;
     averageCapacity: string;
   };
-  courses: Array<{
+  userStats: {
+    total: number;
+    active: number;
+    students: number;
+    faculty: number;
+  };
+  financialStats: {
+    totalRevenue: number;
+    pendingPayments: number;
+  };
+  topCourses: Array<{
     id: string;
     name: string;
     course_code: string;
@@ -35,7 +45,7 @@ interface CourseStats {
 
 export default function ReportsPage() {
   const { getToken } = useAuth();
-  const [courseStats, setCourseStats] = useState<CourseStats | null>(null);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,7 +58,7 @@ export default function ReportsPage() {
       const token = await getToken();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/courses/stats`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/reports`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -56,10 +66,10 @@ export default function ReportsPage() {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to fetch course stats');
+      if (!response.ok) throw new Error('Failed to fetch reports');
 
       const data = await response.json();
-      setCourseStats(data.data);
+      setReportData(data.data);
     } catch (error) {
       console.error('Error fetching reports:', error);
     } finally {
@@ -78,9 +88,7 @@ export default function ReportsPage() {
     );
   }
 
-  const topCourses = courseStats?.courses
-    .sort((a, b) => b.current_enrollment - a.current_enrollment)
-    .slice(0, 10) || [];
+  const topCourses = reportData?.topCourses || [];
 
   return (
     <div className="py-8 px-4">
@@ -104,25 +112,25 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <QuickStatCard
             title="Total Courses"
-            value={courseStats?.stats.total || 0}
+            value={reportData?.courseStats.total || 0}
             icon={BookOpen}
             gradient="from-blue-500 to-indigo-600"
           />
           <QuickStatCard
             title="Active Courses"
-            value={courseStats?.stats.active || 0}
+            value={reportData?.courseStats.active || 0}
             icon={GraduationCap}
             gradient="from-green-500 to-emerald-600"
           />
           <QuickStatCard
             title="Total Enrollments"
-            value={courseStats?.stats.totalEnrollments || 0}
+            value={reportData?.courseStats.totalEnrollments || 0}
             icon={Users}
             gradient="from-purple-500 to-pink-600"
           />
           <QuickStatCard
             title="Avg Capacity"
-            value={courseStats?.stats.averageCapacity || 0}
+            value={reportData?.courseStats.averageCapacity || 0}
             icon={TrendingUp}
             gradient="from-orange-500 to-red-600"
           />
@@ -187,8 +195,8 @@ export default function ReportsPage() {
             icon={Users}
             gradient="from-blue-500 to-indigo-600"
             metrics={[
-              { label: 'This Month', value: '+124 users' },
-              { label: 'Growth Rate', value: '+15.3%' },
+              { label: 'Total Users', value: reportData?.userStats.total.toString() || '0' },
+              { label: 'Active Users', value: reportData?.userStats.active.toString() || '0' },
             ]}
           />
           <ReportCard
@@ -197,8 +205,8 @@ export default function ReportsPage() {
             icon={BookOpen}
             gradient="from-purple-500 to-pink-600"
             metrics={[
-              { label: 'Completion Rate', value: '87.5%' },
-              { label: 'Avg. Enrollment', value: courseStats?.stats.averageCapacity || '0' },
+              { label: 'Total Courses', value: reportData?.courseStats.total.toString() || '0' },
+              { label: 'Avg. Enrollment', value: reportData?.courseStats.averageCapacity || '0' },
             ]}
           />
           <ReportCard
@@ -207,18 +215,18 @@ export default function ReportsPage() {
             icon={DollarSign}
             gradient="from-green-500 to-emerald-600"
             metrics={[
-              { label: 'This Semester', value: '$456,890' },
-              { label: 'Collection Rate', value: '94.2%' },
+              { label: 'Total Revenue', value: `$${(reportData?.financialStats.totalRevenue || 0).toLocaleString()}` },
+              { label: 'Pending Payments', value: `$${(reportData?.financialStats.pendingPayments || 0).toLocaleString()}` },
             ]}
           />
           <ReportCard
-            title="Academic Calendar"
-            description="Upcoming events and important dates"
+            title="System Health"
+            description="System performance and activity status"
             icon={Calendar}
             gradient="from-orange-500 to-red-600"
             metrics={[
-              { label: 'Active Semester', value: 'Fall 2024' },
-              { label: 'Days Remaining', value: '45 days' },
+              { label: 'System Status', value: 'Healthy' },
+              { label: 'Last Updated', value: new Date().toLocaleDateString() },
             ]}
           />
         </div>
