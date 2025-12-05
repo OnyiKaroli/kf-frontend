@@ -105,7 +105,7 @@ export default function HomePage() {
             <div className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 z-10" />
               <img
-                src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&h=600&fit=crop"
+                src="/hero.jpeg"
                 alt="Students learning"
                 className="w-full h-auto"
               />
