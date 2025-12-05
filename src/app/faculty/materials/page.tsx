@@ -16,9 +16,11 @@ import {
   FileArchive,
   Loader2,
   AlertCircle,
-  Folder
+  Folder,
+  X,
+  Upload
 } from 'lucide-react';
-import { getFacultyMaterials } from '@/lib/faculty-api';
+import { getFacultyMaterials, getFacultyCourses, createCourseMaterial } from '@/lib/faculty-api';
 
 interface Material {
   id: string;
@@ -38,16 +40,36 @@ interface CourseMaterials {
   files: Material[];
 }
 
+interface Course {
+  id: string;
+  name: string;
+  courseCode: string;
+}
+
 export default function FacultyMaterialsPage() {
   const { getToken } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [materials, setMaterials] = useState<CourseMaterials[]>([]);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState<string | null>(null);
+  
+  // Upload Modal State
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFormData, setUploadFormData] = useState({
+    courseId: '',
+    title: '',
+    description: '',
+    materialType: 'lecture_notes',
+    fileUrl: '',
+  });
 
   useEffect(() => {
     fetchMaterials();
+    fetchCourses();
   }, []);
 
   async function fetchMaterials(search?: string) {
@@ -73,6 +95,55 @@ export default function FacultyMaterialsPage() {
       setLoading(false);
     }
   }
+
+  async function fetchCourses() {
+    try {
+      const response = await getFacultyCourses(getToken);
+      if (response.success) {
+        setCourses(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching courses:', err);
+    }
+  }
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFormData.courseId || !uploadFormData.title || !uploadFormData.fileUrl) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError(null);
+      
+      const response = await createCourseMaterial(getToken, {
+        ...uploadFormData,
+        fileSize: 1024 * 1024, // Mock size
+        fileType: 'application/pdf', // Mock type
+      });
+
+      if (response.success) {
+        setIsUploadModalOpen(false);
+        setUploadFormData({
+          courseId: '',
+          title: '',
+          description: '',
+          materialType: 'lecture_notes',
+          fileUrl: '',
+        });
+        fetchMaterials();
+      } else {
+        setError(response.message || 'Failed to upload material');
+      }
+    } catch (err: any) {
+      console.error('Error uploading material:', err);
+      setError(err.message || 'Failed to upload material');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -124,6 +195,7 @@ export default function FacultyMaterialsPage() {
   }
 
   return (
+    <>
     <div className="py-8 px-4 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -131,7 +203,10 @@ export default function FacultyMaterialsPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Course Materials</h1>
           <p className="text-gray-600">Manage learning resources and files</p>
         </div>
-        <button className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+        <button 
+          onClick={() => setIsUploadModalOpen(true)}
+          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+        >
           <Plus className="w-5 h-5 mr-2" />
           Upload Material
         </button>
@@ -272,5 +347,137 @@ export default function FacultyMaterialsPage() {
         </div>
       )}
     </div>
+
+      {/* Upload Modal */}
+      <AnimatePresence>
+        {isUploadModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">Upload Material</h2>
+                <button
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleUpload} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Course
+                  </label>
+                  <select
+                    required
+                    value={uploadFormData.courseId}
+                    onChange={(e) => setUploadFormData({ ...uploadFormData, courseId: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
+                  >
+                    <option value="">Select a course</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.courseCode} - {course.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={uploadFormData.title}
+                    onChange={(e) => setUploadFormData({ ...uploadFormData, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="e.g., Week 1 Lecture Notes"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={uploadFormData.description}
+                    onChange={(e) => setUploadFormData({ ...uploadFormData, description: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    rows={3}
+                    placeholder="Optional description..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Type
+                    </label>
+                    <select
+                      value={uploadFormData.materialType}
+                      onChange={(e) => setUploadFormData({ ...uploadFormData, materialType: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
+                    >
+                      <option value="lecture_notes">Lecture Notes</option>
+                      <option value="assignment">Assignment</option>
+                      <option value="reference">Reference</option>
+                      <option value="video">Video</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      File URL
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={uploadFormData.fileUrl}
+                      onChange={(e) => setUploadFormData({ ...uploadFormData, fileUrl: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadModalOpen(false)}
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
