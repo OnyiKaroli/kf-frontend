@@ -60,50 +60,52 @@ export default function CourseDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!courseId) return;
+    
+    async function fetchCourseDetails() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await getFacultyCourses(getToken);
+
+        if (response.success) {
+          const foundCourse = response.data.find((c: Course) => c.id === courseId);
+          if (foundCourse) {
+            setCourse(foundCourse);
+          } else {
+            setError('Course not found');
+          }
+        } else {
+          setError(response.message || 'Failed to load course details');
+        }
+      } catch (err: any) {
+        console.error('Error fetching course details:', err);
+        setError(err.message || 'Failed to load course details');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function fetchStudents() {
+      try {
+        setLoadingStudents(true);
+
+        const response = await getCourseStudents(getToken, courseId);
+
+        if (response.success) {
+          setStudents(response.data || []);
+        }
+      } catch (err: any) {
+        console.error('Error fetching students:', err);
+      } finally {
+        setLoadingStudents(false);
+      }
+    }
+
     fetchCourseDetails();
     fetchStudents();
-  }, [courseId]);
-
-  async function fetchCourseDetails() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await getFacultyCourses(getToken);
-
-      if (response.success) {
-        const foundCourse = response.data.find((c: Course) => c.id === courseId);
-        if (foundCourse) {
-          setCourse(foundCourse);
-        } else {
-          setError('Course not found');
-        }
-      } else {
-        setError(response.message || 'Failed to load course details');
-      }
-    } catch (err: any) {
-      console.error('Error fetching course details:', err);
-      setError(err.message || 'Failed to load course details');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchStudents() {
-    try {
-      setLoadingStudents(true);
-
-      const response = await getCourseStudents(getToken, courseId);
-
-      if (response.success) {
-        setStudents(response.data || []);
-      }
-    } catch (err: any) {
-      console.error('Error fetching students:', err);
-    } finally {
-      setLoadingStudents(false);
-    }
-  }
+  }, [courseId, getToken]);
 
   if (loading) {
     return (
@@ -214,7 +216,7 @@ export default function CourseDetailsPage() {
             <div>
               <p className="text-sm text-gray-500">Semester</p>
               <p className="font-semibold text-gray-900">
-                {course.semester?.charAt(0).toUpperCase() + course.semester?.slice(1)} {course.academicYear}
+                {course.semester ? `${course.semester.charAt(0).toUpperCase()}${course.semester.slice(1)}` : 'N/A'} {course.academicYear || ''}
               </p>
             </div>
           </div>
