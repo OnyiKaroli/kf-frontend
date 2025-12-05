@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   BookOpen,
@@ -35,6 +36,7 @@ interface Course {
 
 export default function FacultyCoursesPage() {
   const { getToken } = useAuth();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,13 +175,21 @@ export default function FacultyCoursesPage() {
                 </div>
 
                 <div className="mt-6 flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-lg hover:bg-indigo-100 transition-colors">
+                  <button 
+                    onClick={() => router.push(`/faculty/courses/${course.id}`)}
+                    className="flex-1 px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-lg hover:bg-indigo-100 transition-colors"
+                  >
                     View Details
                   </button>
                   {course.syllabusUrl && (
-                    <button className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <a
+                      href={course.syllabusUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center"
+                    >
                       Syllabus
-                    </button>
+                    </a>
                   )}
                 </div>
               </div>
