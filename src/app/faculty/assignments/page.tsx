@@ -334,7 +334,7 @@ export default function FacultyAssignmentsPage() {
                     required
                     value={newAssignment.courseId}
                     onChange={(e) => setNewAssignment({ ...newAssignment, courseId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                   >
                     <option value="">Select a course</option>
                     {courses.map((course) => (
@@ -355,7 +355,7 @@ export default function FacultyAssignmentsPage() {
                     value={newAssignment.title}
                     onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
                     placeholder="e.g., Midterm Project Proposal"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                   />
                 </div>
 
@@ -368,7 +368,7 @@ export default function FacultyAssignmentsPage() {
                     value={newAssignment.description}
                     onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}
                     placeholder="Instructions for the students..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none text-gray-900"
                   />
                 </div>
 
@@ -381,7 +381,7 @@ export default function FacultyAssignmentsPage() {
                     required
                     value={newAssignment.dueDate}
                     onChange={(e) => setNewAssignment({ ...newAssignment, dueDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                   />
                 </div>
 
@@ -394,7 +394,7 @@ export default function FacultyAssignmentsPage() {
                     value={newAssignment.fileUrl}
                     onChange={(e) => setNewAssignment({ ...newAssignment, fileUrl: e.target.value })}
                     placeholder="https://..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                   />
                 </div>
 
