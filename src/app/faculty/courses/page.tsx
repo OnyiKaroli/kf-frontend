@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getFacultyCourses } from '@/lib/faculty-api';
+import CreateCourseModal from '@/components/CreateCourseModal';
 
 interface Course {
   id: string;
@@ -38,6 +39,7 @@ export default function FacultyCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchCourses();
@@ -87,7 +89,10 @@ export default function FacultyCoursesPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Courses</h1>
           <p className="text-gray-600">Manage your curriculum and class schedules</p>
         </div>
-        <button className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+        >
           <Plus className="w-5 h-5 mr-2" />
           Create New Course
         </button>
@@ -192,6 +197,15 @@ export default function FacultyCoursesPage() {
           </p>
         </div>
       )}
+      
+      {/* Create Course Modal */}
+      <CreateCourseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          fetchCourses();
+        }}
+      />
     </div>
   );
 }

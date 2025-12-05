@@ -59,6 +59,46 @@ export async function getFacultyCourses(
 }
 
 /**
+ * Create a new course
+ */
+export async function createCourse(
+    getToken: () => Promise<string | null>,
+    data: {
+        courseCode: string;
+        name: string;
+        description?: string;
+        departmentId: string;
+        credits: number;
+        maxCapacity?: number;
+        semester?: string;
+        academicYear?: string;
+        courseLevel?: string;
+        prerequisites?: string;
+        syllabusUrl?: string;
+        startDate?: string;
+        endDate?: string;
+    }
+) {
+    const token = await getToken();
+
+    const response = await fetch(`${API_URL}/api/faculty/courses`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to create course');
+    }
+
+    return response.json();
+}
+
+
+/**
  * Fetch students enrolled in a course
  */
 export async function getCourseStudents(
