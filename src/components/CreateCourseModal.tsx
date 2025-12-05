@@ -52,7 +52,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSuccess }: Create
       setLoadingDepartments(true);
       const token = await getToken();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/departments`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/departments`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -62,6 +62,8 @@ export default function CreateCourseModal({ isOpen, onClose, onSuccess }: Create
       if (response.ok) {
         const result = await response.json();
         setDepartments(result.data || []);
+      } else {
+        console.error('Failed to fetch departments:', response.status);
       }
     } catch (err) {
       console.error('Error fetching departments:', err);
