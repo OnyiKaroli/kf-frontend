@@ -377,7 +377,7 @@ export default function FacultyMaterialsPage() {
                     required
                     value={uploadFormData.courseId}
                     onChange={(e) => setUploadFormData({ ...uploadFormData, courseId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-gray-900"
                   >
                     <option value="">Select a course</option>
                     {courses.map((course) => (
@@ -397,7 +397,7 @@ export default function FacultyMaterialsPage() {
                     required
                     value={uploadFormData.title}
                     onChange={(e) => setUploadFormData({ ...uploadFormData, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                     placeholder="e.g., Week 1 Lecture Notes"
                   />
                 </div>
@@ -409,7 +409,7 @@ export default function FacultyMaterialsPage() {
                   <textarea
                     value={uploadFormData.description}
                     onChange={(e) => setUploadFormData({ ...uploadFormData, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                     rows={3}
                     placeholder="Optional description..."
                   />
@@ -423,7 +423,7 @@ export default function FacultyMaterialsPage() {
                     <select
                       value={uploadFormData.materialType}
                       onChange={(e) => setUploadFormData({ ...uploadFormData, materialType: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-gray-900"
                     >
                       <option value="lecture_notes">Lecture Notes</option>
                       <option value="assignment">Assignment</option>
@@ -441,7 +441,7 @@ export default function FacultyMaterialsPage() {
                       required
                       value={uploadFormData.fileUrl}
                       onChange={(e) => setUploadFormData({ ...uploadFormData, fileUrl: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900"
                       placeholder="https://..."
                     />
                   </div>
