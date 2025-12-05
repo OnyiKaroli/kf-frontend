@@ -102,12 +102,12 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="relative"
           >
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white aspect-[4/3]">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 z-10" />
               <img
                 src="/hero.jpeg"
                 alt="Students learning"
-                className="w-full h-auto"
+                className="w-full h-full object-cover"
               />
             </div>
             
