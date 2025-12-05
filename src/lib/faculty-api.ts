@@ -157,6 +157,39 @@ export async function getFacultyAssignments(
 }
 
 /**
+ * Create a new assignment
+ */
+export async function createAssignment(
+    getToken: () => Promise<string | null>,
+    data: {
+        courseId: string;
+        title: string;
+        description?: string;
+        dueDate: string;
+        fileUrl?: string;
+        fileSize?: number;
+        fileType?: string;
+    }
+) {
+    const token = await getToken();
+
+    const response = await fetch(`${API_URL}/api/faculty/assignments`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to create assignment');
+    }
+
+    return response.json();
+}
+
+/**
  * Fetch faculty course materials
  */
 export async function getFacultyMaterials(
